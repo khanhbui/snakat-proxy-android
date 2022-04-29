@@ -14,14 +14,34 @@ project("proxy")
 # You can define multiple libraries, and CMake builds them for you.
 # Gradle automatically packages shared libraries with your APK.
 
-add_library( # Sets the name of the library.
-             proxy
+################# snakat #################
+set(
+        snakat_src
+        ./snakat
+)
+set(
+        snakat_prebuilt
+        ./snakat/prebuilt
+)
+add_subdirectory(
+        ${snakat_src}
+        ${snakat_prebuilt}
+)
 
-             # Sets the library as a shared library.
-             SHARED
+################# proxy #################
+include_directories(
+        ${snakat_src}
+)
+add_library(
+        # Sets the name of the library.
+        proxy
 
-             # Provides a relative path to your source file(s).
-             proxy.cpp )
+        # Sets the library as a shared library.
+        SHARED
+
+        # Provides a relative path to your source file(s).
+        Java_com_snakat_proxy_ProxyInternal.cpp
+)
 
 # Searches for a specified prebuilt library and stores the path as a
 # variable. Because CMake includes system libraries in the search path by
@@ -29,20 +49,33 @@ add_library( # Sets the name of the library.
 # you want to add. CMake verifies that the library exists before
 # completing its build.
 
-find_library( # Sets the name of the path variable.
-              log-lib
+find_library(
+        android-lib
+        android
+)
+find_library(
+        # Sets the name of the path variable.
+        log-lib
 
-              # Specifies the name of the NDK library that
-              # you want CMake to locate.
-              log )
+        # Specifies the name of the NDK library that
+        # you want CMake to locate.
+        log
+)
 
 # Specifies libraries CMake should link to your target library. You
 # can link multiple libraries, such as libraries you define in this
 # build script, prebuilt third-party libraries, or system libraries.
 
-target_link_libraries( # Specifies the target library.
-                       proxy
+target_link_libraries(
+        # Specifies the target library.
+        proxy
+        -Wl,--whole-archive
 
-                       # Links the target library to the log library
-                       # included in the NDK.
-                       ${log-lib} )
+        # Links the target library to the log library
+        # included in the NDK.
+        ${log-lib}
+        ${android-lib}
+
+        snakat-lib
+        -Wl,--no-whole-archive
+)

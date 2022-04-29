@@ -1,0 +1,6 @@
+[submodule "src/main/cpp/libs/civetweb/civetweb"]
+	path = src/main/cpp/libs/civetweb/civetweb
+	url = https://github.com/khanhbui/civetweb.git
+[submodule "src/main/cpp/libs/rapidjson/rapidjson"]
+	path = src/main/cpp/libs/rapidjson/rapidjson
+	url = https://github.com/khanhbui/rapidjson.git

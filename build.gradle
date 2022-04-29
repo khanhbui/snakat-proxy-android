@@ -14,15 +14,34 @@ android {
         consumerProguardFiles "consumer-rules.pro"
         externalNativeBuild {
             cmake {
-                cppFlags ""
+                cppFlags "-std=c++11 -DANDROID_STL=c++_shared -lz"
             }
+        }
+        ndk {
+            abiFilters 'armeabi-v7a', 'arm64-v8a', 'x86', 'x86_64'
         }
     }
 
     buildTypes {
+        debug {
+            jniDebuggable true
+            externalNativeBuild {
+                cmake {
+                    cppFlags "-std=c++11 -frtti -fexceptions -lz -DPLATFORM_ANDROID=1 -DDEBUG=1 -DLEAK_DETECTION=1"
+                    cFlags "-DPLATFORM_ANDROID=1 -DDEBUG=1 -DOPENSSL_API_1_1 -DNO_SSL_DL"
+                }
+            }
+        }
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+
+            externalNativeBuild {
+                cmake {
+                    cppFlags "-std=c++11 -frtti -fexceptions -lz -DPLATFORM_ANDROID=1"
+                    cFlags "-DPLATFORM_ANDROID=1"
+                }
+            }
         }
     }
 

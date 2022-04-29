@@ -17,13 +17,9 @@ public final class Proxy extends ProxyInternal {
         return mInstance;
     }
 
-    public static void createInstance(@NonNull Context context) {
-        createInstance(context, false);
-    }
-
-    public static void createInstance(@NonNull Context context, boolean logEnabled) {
+    public static void createInstance(@NonNull Context context, @NonNull Config config) {
         if (mInstance == null) {
-            mInstance = new Proxy(context, logEnabled);
+            mInstance = new Proxy(context, config);
         }
     }
 
@@ -32,13 +28,31 @@ public final class Proxy extends ProxyInternal {
         mInstance = null;
     }
 
-    protected Proxy(Context context, boolean logEnabled) {
-        super(context, logEnabled);
+    private Proxy(Context context, @NonNull Config config) {
+        super(context, config);
     }
 
-    /**
-     * A native method that is implemented by the 'proxy' native library,
-     * which is packaged with this application.
-     */
-    public native String stringFromJNI();
+    public void start() {
+        startJNI();
+    }
+
+    public void pause() {
+        pauseJNI();
+    }
+
+    public void resume() {
+        resumeJNI();
+    }
+
+    public void stop() {
+        stopJNI();
+    }
+
+    public boolean isStarted() {
+        return isStartedJNI();
+    }
+
+    public boolean isRunning() {
+        return isRunningJNI();
+    }
 }
