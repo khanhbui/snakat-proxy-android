@@ -13,6 +13,7 @@ import com.snakat.proxy.data.ManifestList;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
@@ -25,6 +26,7 @@ import io.reactivex.CompletableSource;
 import io.reactivex.Maybe;
 import io.reactivex.MaybeSource;
 import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.disposables.Disposable;
 import io.reactivex.functions.Action;
 import io.reactivex.functions.Consumer;
 import io.reactivex.functions.Function;
@@ -74,7 +76,7 @@ abstract class ProxyInternal {
         mContext.clear();
     }
 
-    boolean deleteRecursive(@NonNull File path) {
+    protected boolean deleteRecursive(@NonNull File path) {
         if (!path.exists()) {
             return false;
         }
@@ -89,31 +91,64 @@ abstract class ProxyInternal {
     }
 
     @NonNull
+    private File createFile(@NonNull String filename) throws IOException {
+        File file = new File(mConfig.getDocumentDir(), filename);
+        if (!file.exists()) {
+            File basePath = file.getParentFile();
+            if (basePath != null && !basePath.exists()) {
+                basePath.mkdirs();
+            }
+            file.createNewFile();
+        }
+        return file;
+    }
+
+    @NonNull
     protected Maybe<ManifestList> getRemoteManifest() {
-        return mManifestService
+        Maybe<ManifestList> maybe = mManifestService
                 .getManifest(mConfig.getManifestFilename())
                 .doOnSuccess(new Consumer<ManifestList>() {
                     @Override
                     public void accept(ManifestList manifestList) throws Exception {
                         mRemoteManifestList = manifestList;
+
+                        if (LOG_ENABLED) {
+                            Log.i(TAG, String.format("getRemoteManifest: complete with %s manifest(s).", manifestList.size()));
+                        }
                     }
                 })
                 .subscribeOn(Schedulers.io());
+
+        if (LOG_ENABLED) {
+            maybe = maybe.doOnSubscribe(new Consumer<Disposable>() {
+                @Override
+                public void accept(Disposable disposable) throws Exception {
+                    Log.i(TAG, "getRemoteManifest: start.");
+                }
+            }).doOnError(new Consumer<Throwable>() {
+                @Override
+                public void accept(Throwable throwable) throws Exception {
+                    Log.i(TAG, String.format("getRemoteManifest: error: %s.", throwable.getLocalizedMessage()));
+                }
+            }).doOnComplete(new Action() {
+                @Override
+                public void run() throws Exception {
+                    Log.i(TAG, "getRemoteManifest: complete with no response.");
+                }
+            });
+        }
+
+        return maybe;
     }
 
     @NonNull
     protected Completable saveRemoteManifest() {
-        return Completable.defer(new Callable<CompletableSource>() {
+        Completable completable = Completable.defer(new Callable<CompletableSource>() {
             @Override
             public CompletableSource call() throws Exception {
                 String json = new Gson().toJson(mRemoteManifestList);
                 if (json != null) {
-                    String manifestFilename = mConfig.getManifestFilename();
-                    File cachedManifest = new File(mConfig.getDocumentDir(), manifestFilename);
-                    if (!cachedManifest.exists()) {
-                        cachedManifest.createNewFile();
-                    }
-
+                    File cachedManifest = createFile(mConfig.getManifestFilename());
                     FileOutputStream outputStream = new FileOutputStream(cachedManifest);
                     OutputStreamWriter outputStreamWriter = new OutputStreamWriter(outputStream);
                     outputStreamWriter.append(json);
@@ -124,11 +159,32 @@ abstract class ProxyInternal {
                 return Completable.complete();
             }
         });
+
+        if (LOG_ENABLED) {
+            completable = completable.doOnSubscribe(new Consumer<Disposable>() {
+                @Override
+                public void accept(Disposable disposable) throws Exception {
+                    Log.i(TAG, "saveRemoteManifest: start.");
+                }
+            }).doOnError(new Consumer<Throwable>() {
+                @Override
+                public void accept(Throwable throwable) throws Exception {
+                    Log.i(TAG, String.format("saveRemoteManifest: error: %s.", throwable.getLocalizedMessage()));
+                }
+            }).doOnComplete(new Action() {
+                @Override
+                public void run() throws Exception {
+                    Log.i(TAG, "saveRemoteManifest: complete.");
+                }
+            });
+        }
+
+        return completable;
     }
 
     @NonNull
     protected Maybe<ManifestList> getLocalManifest() {
-        return Maybe.defer(new Callable<MaybeSource<? extends ManifestList>>() {
+        Maybe<ManifestList> maybe = Maybe.defer(new Callable<MaybeSource<? extends ManifestList>>() {
             @Override
             public MaybeSource<? extends ManifestList> call() throws Exception {
                 String manifestFilename = mConfig.getManifestFilename();
@@ -146,27 +202,72 @@ abstract class ProxyInternal {
                 return Maybe.just(manifestList);
             }
         }).subscribeOn(Schedulers.io());
+
+        if (LOG_ENABLED) {
+            maybe = maybe.doOnSuccess(new Consumer<ManifestList>() {
+                @Override
+                public void accept(ManifestList manifestList) throws Exception {
+                    Log.i(TAG, "getLocalManifest: start.");
+                }
+            }).doOnSuccess(new Consumer<ManifestList>() {
+                @Override
+                public void accept(ManifestList manifestList) throws Exception {
+                    Log.i(TAG, String.format("getLocalManifest: complete with %s manifest(s).", manifestList.size()));
+                }
+            }).doOnError(new Consumer<Throwable>() {
+                @Override
+                public void accept(Throwable throwable) throws Exception {
+                    Log.i(TAG, String.format("getLocalManifest: error: %s.", throwable.getLocalizedMessage()));
+                }
+            }).doOnComplete(new Action() {
+                @Override
+                public void run() throws Exception {
+                    Log.i(TAG, "getLocalManifest: complete with no response.");
+                }
+            });
+        }
+
+        return maybe;
     }
 
     @NonNull
     protected Completable downloadFiles(@NonNull ManifestList manifestList, @NonNull DownloadListener downloadListener) {
+        Completable completable;
+
         int size = manifestList.size();
         if (size == 0) {
-            return Completable.complete();
-        }
-
-        Completable completable = downloadFile(manifestList.get(0), downloadListener);
-        for (int i = 1; i < size;) {
-            Log.i(TAG, "i=" + i + ", size=" + size);
-
-            int next = i + PARALLEL_DOWNLOAD_NUM;
-            Completable parallelDownload = downloadFile(manifestList.get(i), downloadListener);
-            for (i++; i < next && i < size; i++) {
-                Log.i(TAG, "---i=" + i + ", size=" + size + ", next=" + next);
-                parallelDownload = parallelDownload.mergeWith(downloadFile(manifestList.get(i), downloadListener));
+            completable = Completable.complete();
+        } else {
+            completable = downloadFile(manifestList.get(0), downloadListener);
+            for (int i = 1; i < size; ) {
+                int next = i + PARALLEL_DOWNLOAD_NUM;
+                Completable parallelDownload = downloadFile(manifestList.get(i), downloadListener);
+                for (i++; i < next && i < size; i++) {
+                    parallelDownload = parallelDownload.mergeWith(downloadFile(manifestList.get(i), downloadListener));
+                }
+                completable = completable.andThen(parallelDownload);
             }
-            completable = completable.andThen(parallelDownload);
         }
+
+        if (LOG_ENABLED) {
+            completable = completable.doOnSubscribe(new Consumer<Disposable>() {
+                @Override
+                public void accept(Disposable disposable) throws Exception {
+                    Log.i(TAG, "downloadFiles: start.");
+                }
+            }).doOnError(new Consumer<Throwable>() {
+                @Override
+                public void accept(Throwable throwable) throws Exception {
+                    Log.i(TAG, String.format("downloadFiles: error: %s.", throwable.getLocalizedMessage()));
+                }
+            }).doOnComplete(new Action() {
+                @Override
+                public void run() throws Exception {
+                    Log.i(TAG, "downloadFiles: complete.");
+                }
+            });
+        }
+
         return completable;
     }
 
@@ -184,18 +285,11 @@ abstract class ProxyInternal {
 
     @NonNull
     private Completable downloadFile(@NonNull String filename) {
-        return mManifestService.downloadFile(filename)
+        Completable completable = mManifestService.downloadFile(filename)
                 .flatMapCompletable(new Function<ResponseBody, CompletableSource>() {
                     @Override
                     public CompletableSource apply(ResponseBody responseBody) throws Exception {
-                        File file = new File(mConfig.getDocumentDir(), filename);
-                        if (!file.exists()) {
-                            File basePath = file.getParentFile();
-                            if (basePath != null && !basePath.exists()) {
-                                basePath.mkdirs();
-                            }
-                            file.createNewFile();
-                        }
+                        File file = createFile(filename);
 
                         InputStream inputStream = responseBody.byteStream();
                         FileOutputStream outputStream = new FileOutputStream(file);
@@ -212,9 +306,28 @@ abstract class ProxyInternal {
                     }
                 })
                 .subscribeOn(Schedulers.io());
+
+        if (LOG_ENABLED) {
+            completable = completable.doOnSubscribe(new Consumer<Disposable>() {
+                @Override
+                public void accept(Disposable disposable) throws Exception {
+                    Log.i(TAG, String.format("downloadFile: [%s] start.", filename));
+                }
+            }).doOnError(new Consumer<Throwable>() {
+                @Override
+                public void accept(Throwable throwable) throws Exception {
+                    Log.i(TAG, String.format("downloadFile: [%s] error: %s.", filename, throwable.getLocalizedMessage()));
+                }
+            }).doOnComplete(new Action() {
+                @Override
+                public void run() throws Exception {
+                    Log.i(TAG, String.format("downloadFile: [%s] complete.", filename));
+                }
+            });
+        }
+
+        return completable;
     }
-
-
 
     protected native void initJNI(AssetManager assetManager, String documentDir, String hostName, boolean sslEnabled, String sslCertFilename);
 

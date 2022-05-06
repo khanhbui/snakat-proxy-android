@@ -55,18 +55,34 @@ public final class Proxy extends ProxyInternal {
 
     public void start() {
         startJNI();
+
+        if (LOG_ENABLED) {
+            Log.i(TAG, "started.");
+        }
     }
 
     public void pause() {
         pauseJNI();
+
+        if (LOG_ENABLED) {
+            Log.i(TAG, "paused.");
+        }
     }
 
     public void resume() {
         resumeJNI();
+
+        if (LOG_ENABLED) {
+            Log.i(TAG, "resumed.");
+        }
     }
 
     public void stop() {
         stopJNI();
+
+        if (LOG_ENABLED) {
+            Log.i(TAG, "stopped.");
+        }
     }
 
     public boolean isStarted() {
@@ -82,6 +98,10 @@ public final class Proxy extends ProxyInternal {
     }
 
     public void downloadBundle(DownloadListener downloadListener, long timeOut) {
+        if (LOG_ENABLED) {
+            Log.i(TAG, String.format("downloadBundle: start with timeout=%dms", timeOut));
+        }
+
         if (mDisposable != null) {
             mDisposable.dispose();
             mDisposable = null;
@@ -98,7 +118,7 @@ public final class Proxy extends ProxyInternal {
                             public ManifestList apply(ManifestList remoteList, ManifestList localList) throws Exception {
                                 ManifestList ret = new ManifestList();
                                 for (Manifest remote : remoteList) {
-                                    if (!localList.contains(remote)) {
+                                    if (localList.contains(remote)) {
                                         continue;
                                     }
                                     ret.add(remote);
@@ -146,12 +166,18 @@ public final class Proxy extends ProxyInternal {
                     @Override
                     public void run() throws Exception {
                         downloadListener.onDone();
+
+                        if (LOG_ENABLED) {
+                            Log.i(TAG, "downloadBundle: done.");
+                        }
                     }
                 }, new Consumer<Throwable>() {
                     @Override
                     public void accept(Throwable throwable) throws Exception {
-                        Log.i(TAG, "Download error.");
-                        throwable.printStackTrace();
+                        if (LOG_ENABLED) {
+                            Log.i(TAG, String.format("downloadBundle: error: %s.", throwable.getLocalizedMessage()));
+                        }
+
                         downloadListener.onError(throwable);
                     }
                 });
@@ -160,5 +186,9 @@ public final class Proxy extends ProxyInternal {
     public void clearCache() {
         File dir = new File(mConfig.getDocumentDir());
         deleteRecursive(dir);
+
+        if (LOG_ENABLED) {
+            Log.i(TAG, "clearCache.");
+        }
     }
 }

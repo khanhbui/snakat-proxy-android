@@ -127,7 +127,7 @@ public class Config {
         }
 
         public Builder setLogEnabled(@BoolRes int logEnabled) {
-            return setSslEnabled(mResources.getBoolean(logEnabled));
+            return setLogEnabled(mResources.getBoolean(logEnabled));
         }
 
         public Config build() {
