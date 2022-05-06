@@ -11,7 +11,9 @@ namespace snakat {
 
     class FileUtil : public Singleton<FileUtil> {
     private:
-        AAssetManager *assetManager;
+#if PLATFORM_ANDROID
+        AAssetManager *_aAssetManager;
+#endif
 
         static int _makeDirRecursive(const std::string &dir);
 
@@ -19,7 +21,11 @@ namespace snakat {
         FileUtil();
         virtual ~FileUtil();
 
+#if PLATFORM_ANDROID
         bool init(AAssetManager *assetManager);
+#else
+        bool init();
+#endif
 
         const char *getContent(const std::string &filename, size_t &size);
 

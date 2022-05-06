@@ -12,22 +12,35 @@
 
 namespace snakat {
 
-    FileUtil::FileUtil() :
-            assetManager(nullptr) {
+    FileUtil::FileUtil()
+#if PLATFORM_ANDROID
+            : _aAssetManager(nullptr)
+#endif //PLATFORM_ANDROID
+    {
     }
 
     FileUtil::~FileUtil() {
-        assetManager = nullptr;
+#if PLATFORM_ANDROID
+        _aAssetManager = nullptr;
+#endif //PLATFORM_ANDROID
     }
 
-    bool FileUtil::init(AAssetManager *assetManager) {
-        this->assetManager = assetManager;
+#if PLATFORM_ANDROID
+
+    bool FileUtil::init(AAssetManager *aAssetManager) {
+        _aAssetManager = aAssetManager;
+#else
+        bool FileUtil::init() {
+            _aAssetManager = aAssetManager;
+#endif //PLATFORM_ANDROID
 
         return true;
     }
 
     const char *FileUtil::getContent(const std::string &filename, size_t &size) {
-        AAsset *aAsset = AAssetManager_open(assetManager, filename.c_str(), AASSET_MODE_STREAMING);
+#if PLATFORM_ANDROID
+        AAsset *aAsset = AAssetManager_open(_aAssetManager, filename.c_str(),
+                                            AASSET_MODE_STREAMING);
         if (aAsset) {
             size = static_cast<size_t>(AAsset_getLength(aAsset));
             char *buf = new char[size + 1];
@@ -59,6 +72,7 @@ namespace snakat {
                 }
             }
         }
+#endif //PLATFORM_ANDROID
 
         return nullptr;
     }
@@ -76,8 +90,10 @@ namespace snakat {
         return index == std::string::npos ? filename : filename.substr(0, index);
     }
 
+#if PLATFORM_ANDROID
+
     bool FileUtil::copyFromApk(const std::string &srcPath, const std::string &desPath) {
-        AAsset *aAsset = AAssetManager_open(assetManager, srcPath.c_str(), AASSET_MODE_STREAMING);
+        AAsset *aAsset = AAssetManager_open(_aAssetManager, srcPath.c_str(), AASSET_MODE_STREAMING);
         if (aAsset) {
             if (makeDir(getDirFromFilename(desPath))) {
                 FILE *out = fopen(desPath.c_str(), "w+");
@@ -99,6 +115,8 @@ namespace snakat {
 
         return false;
     }
+
+#endif //PLATFORM_ANDROID
 
     bool FileUtil::makeDir(const std::string &dir) {
         if (!exist(dir)) {

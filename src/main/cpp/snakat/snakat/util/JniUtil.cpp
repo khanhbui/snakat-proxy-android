@@ -3,28 +3,31 @@
 #include <android/asset_manager_jni.h>
 
 namespace snakat {
-    JavaVM *JniUtil::_javaVM = nullptr;
-    AAssetManager *JniUtil::_aAssetManager = nullptr;
 
-    std::unordered_map<JNIEnv *, std::vector<jobject>> JniUtil::_localRefs;
+    JniUtil::JniUtil()
+            : _javaVM(nullptr),
+              _localRefs() {
+    }
 
-    void JniUtil::setJavaVM(JavaVM *javaVM) {
+    JniUtil::~JniUtil() {
+        _javaVM = nullptr;
+    }
+
+    bool JniUtil::init(JavaVM *javaVM) {
         _javaVM = javaVM;
+
+        return true;
     }
 
-    JavaVM *JniUtil::getJavaVM() {
-        return _javaVM;
-    }
-
-    JNIEnv *JniUtil::getEnv() {
+    JNIEnv *JniUtil::getEnv() const {
         JNIEnv *env = nullptr;
 
-        if (snakat::JniUtil::getJavaVM()->GetEnv((void **) &env, JNI_VERSION_1_6) != JNI_OK) {
+        if (_javaVM->GetEnv((void **) &env, JNI_VERSION_1_6) != JNI_OK) {
             LOGE("Failed to get the environment using GetEnv()");
             return nullptr;
         }
 
-        if (snakat::JniUtil::getJavaVM()->AttachCurrentThread(&env, nullptr) < 0) {
+        if (_javaVM->AttachCurrentThread(&env, nullptr) < 0) {
             LOGE("Failed to get the environment using AttachCurrentThread()");
             return nullptr;
         }
@@ -32,11 +35,9 @@ namespace snakat {
         return env;
     }
 
-    bool JniUtil::getStaticMethodInfo(JniMethodInfo &methodinfo, const char *className,
-                                      const char *methodName, const char *paramCode) {
-        if ((nullptr == className) ||
-            (nullptr == methodName) ||
-            (nullptr == paramCode)) {
+    bool JniUtil::getStaticMethodInfo(const std::string &className, const std::string &methodName, const std::string &sig,
+                                 MethodInfo &methodInfo) const {
+        if (className.empty() || methodName.empty() || sig.empty()) {
             return false;
         }
 
@@ -45,27 +46,25 @@ namespace snakat {
             return false;
         }
 
-        jclass classID = _getClassID(className, pEnv);
+        jclass clazz = _getClass(className, pEnv);
 
-        jmethodID methodID = pEnv->GetStaticMethodID(classID, methodName, paramCode);
+        jmethodID methodID = pEnv->GetStaticMethodID(clazz, methodName.c_str(), sig.c_str());
         if (!methodID) {
-            LOGE("Failed to find static method id of %s", methodName);
+            LOGE("Failed to find static method id of %s", methodName.c_str());
             return false;
         }
 
-        methodinfo.classID = classID;
-        methodinfo.env = pEnv;
-        methodinfo.methodID = methodID;
+        methodInfo.env = pEnv;
+        methodInfo.clazz = clazz;
+        methodInfo.methodID = methodID;
 
         return true;
     }
 
     bool
-    JniUtil::getMethodInfo(JniMethodInfo &methodinfo, const char *className, const char *methodName,
-                           const char *paramCode) {
-        if ((nullptr == className) ||
-            (nullptr == methodName) ||
-            (nullptr == paramCode)) {
+    JniUtil::getMethodInfo(const std::string &className, const std::string &methodName, const std::string &sig,
+                           MethodInfo &methodInfo) const {
+        if (className.empty() || methodName.empty() || sig.empty()) {
             return false;
         }
 
@@ -74,27 +73,24 @@ namespace snakat {
             return false;
         }
 
-        jclass classID = _getClassID(className, pEnv);
+        jclass clazz = _getClass(className, pEnv);
 
-        jmethodID methodID = pEnv->GetMethodID(classID, methodName, paramCode);
+        jmethodID methodID = pEnv->GetMethodID(clazz, methodName.c_str(), sig.c_str());
         if (!methodID) {
-            LOGE("Failed to find method id of %s", methodName);
+            LOGE("Failed to find method id of %s", methodName.c_str());
             return false;
         }
 
-        methodinfo.classID = classID;
-        methodinfo.env = pEnv;
-        methodinfo.methodID = methodID;
+        methodInfo.env = pEnv;
+        methodInfo.clazz = clazz;
+        methodInfo.methodID = methodID;
 
         return true;
     }
 
-    bool JniUtil::getMethodInfo(JniMethodInfo &methodinfo,
-                                const jobject &object,
-                                const char *methodName,
-                                const char *paramCode) {
-        if ((nullptr == methodName) ||
-            (nullptr == paramCode)) {
+    bool JniUtil::getMethodInfo(const jobject &object, const std::string &methodName, const std::string &sig,
+                                MethodInfo &methodInfo) const {
+        if (methodName.empty() || sig.empty()) {
             return false;
         }
 
@@ -103,67 +99,56 @@ namespace snakat {
             return false;
         }
 
-        jclass classID = pEnv->GetObjectClass(object);
+        jclass clazz = pEnv->GetObjectClass(object);
 
-        jmethodID methodID = pEnv->GetMethodID(classID, methodName, paramCode);
+        jmethodID methodID = pEnv->GetMethodID(clazz, methodName.c_str(), sig.c_str());
         if (!methodID) {
-            LOGE("Failed to find method id of %s", methodName);
+            LOGE("Failed to find method id of %s", methodName.c_str());
             return false;
         }
 
-        methodinfo.classID = classID;
-        methodinfo.env = pEnv;
-        methodinfo.methodID = methodID;
+        methodInfo.env = pEnv;
+        methodInfo.clazz = clazz;
+        methodInfo.methodID = methodID;
 
         return true;
     }
 
-    std::string JniUtil::jstring2string(jstring jstr) {
-        if (jstr == nullptr) {
-            return "";
+    std::string JniUtil::jstring2string(jstring jstr) const {
+        std::string ret;
+        if (jstr != nullptr) {
+            JNIEnv *env = getEnv();
+            if (env) {
+                const char *chars = env->GetStringUTFChars(jstr, nullptr);
+                ret.assign(chars);
+                env->ReleaseStringUTFChars(jstr, chars);
+            }
         }
-
-        JNIEnv *env = getEnv();
-        if (!env) {
-            return 0;
-        }
-
-        const char *chars = env->GetStringUTFChars(jstr, nullptr);
-        std::string ret(chars);
-        env->ReleaseStringUTFChars(jstr, chars);
-
         return ret;
     }
 
-    jclass JniUtil::_getClassID(const char *className, JNIEnv *env) {
+    jclass JniUtil::_getClass(const std::string &className, JNIEnv *env) {
         JNIEnv *pEnv = env;
 
-        if (!pEnv) {
-            pEnv = getEnv();
-            if (!pEnv) {
-                return nullptr;
-            }
-        }
-
-        jclass ret = pEnv->FindClass(className);
+        jclass ret = pEnv->FindClass(className.c_str());
         if (!ret) {
-            LOGE("Failed to find class of %s", className);
+            LOGE("Failed to find class of %s", className.c_str());
             return nullptr;
         }
         return ret;
     }
 
-    jstring JniUtil::_convert(JniMethodInfo &t, const char *x) {
-        jstring ret = t.env->NewStringUTF(x ? x : "");
-        _localRefs[t.env].push_back(ret);
+    jstring JniUtil::_convert(const MethodInfo &info, const char *x) {
+        jstring ret = info.env->NewStringUTF(x ? x : "");
+        _localRefs[info.env].push_back(ret);
         return ret;
     }
 
-    jstring JniUtil::_convert(JniMethodInfo &t, const std::string &x) {
-        return _convert(t, x.c_str());
+    jstring JniUtil::_convert(const MethodInfo &info, const std::string &x) {
+        return _convert(info, x.c_str());
     }
 
-    jvalue JniUtil::_convert(JniMethodInfo &t, const long &x) {
+    jvalue JniUtil::_convert(const MethodInfo &info, const long &x) {
         jvalue ret;
         ret.j = x;
         return ret;

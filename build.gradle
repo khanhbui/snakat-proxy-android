@@ -63,5 +63,9 @@ android {
 
 dependencies {
     api rootProject.ext.dependencies.appcompat
-    api rootProject.ext.dependencies.material
+
+    implementation rootProject.ext.dependencies.retrofit
+    implementation rootProject.ext.dependencies.adapterrxjava2
+    implementation rootProject.ext.dependencies.convertergson
+    implementation rootProject.ext.dependencies.rxandroid
 }

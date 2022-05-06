@@ -19,7 +19,7 @@ namespace snakat {
             return handler;
         }
         SAFE_DELETE(handler);
-        return NULL;
+        return nullptr;
     }
     
     bool ApiHandler::handleGet(CivetServer * server, struct mg_connection * conn) {

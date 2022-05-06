@@ -58,6 +58,11 @@ namespace snakat {
 
         static int _onInitSSL(void *ssl_ctx, void *user_data);
 
+        void initOptions(const std::string &documentsAbsDir, const std::string &hostname,
+                         bool sslEnabled, const std::string &sslCertFilename);
+
+        void initCivetCallback();
+
         void addHandlers();
 
         void removeHandlers();
@@ -67,9 +72,13 @@ namespace snakat {
 
         virtual ~Proxy();
 
-        bool init(AAssetManager *assetManager, const std::string &documentsAbsDir,
-                  const std::string &hostname, bool sslEnabled, const std::string &sslCertFilename,
-                  const std::string &manifestFilename);
+#if PLATFORM_ANDROID
+        bool init(JavaVM *jvm, AAssetManager *assetManager,
+#else
+        bool init(
+#endif
+                  const std::string &documentsAbsDir, const std::string &hostname,
+                  bool sslEnabled, const std::string &sslCertFilename);
 
         void start();
 

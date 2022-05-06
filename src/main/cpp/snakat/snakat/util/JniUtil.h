@@ -10,82 +10,82 @@
 #include <android/asset_manager.h>
 
 #include "../core/Macros.h"
+#include "../core/Singleton.h"
 
 namespace snakat {
-    struct JniMethodInfo {
+
+    struct MethodInfo {
         JNIEnv *env;
-        jclass classID;
+        jclass clazz;
         jmethodID methodID;
     };
 
-    class JniUtil {
+    class JniUtil : public Singleton<JniUtil> {
     public:
-        static void setJavaVM(JavaVM *javaVM);
+        JniUtil();
 
-        static JavaVM *getJavaVM();
+        virtual ~JniUtil();
 
-        static JNIEnv *getEnv();
+        bool init(JavaVM *javaVM);
 
-        static bool getStaticMethodInfo(JniMethodInfo &methodinfo,
-                                        const char *className,
-                                        const char *methodName,
-                                        const char *paramCode);
+        JNIEnv *getEnv() const;
 
-        static bool getMethodInfo(JniMethodInfo &methodinfo,
-                                  const char *className,
-                                  const char *methodName,
-                                  const char *paramCode);
+        bool getStaticMethodInfo(const std::string &className, const std::string &methodName,
+                                 const std::string &signature,
+                                 MethodInfo &methodInfo) const;
 
-        static bool getMethodInfo(JniMethodInfo &methodinfo,
-                                  const jobject &object,
-                                  const char *methodName,
-                                  const char *paramCode);
+        bool getMethodInfo(const std::string &className, const std::string &methodName,
+                           const std::string &signature,
+                           MethodInfo &methodInfo) const;
 
-        static std::string jstring2string(jstring str);
+        bool getMethodInfo(const jobject &object, const std::string &methodName,
+                           const std::string &signature,
+                           MethodInfo &methodInfo) const;
+
+        std::string jstring2string(jstring str) const;
 
         template<typename... Ts>
-        static void callVoidMethod(const jobject &object,
+        inline void callVoidMethod(const jobject &object,
                                    const std::string &methodName,
                                    Ts... xs) {
-            JniMethodInfo t;
+            MethodInfo info;
             std::string signature = "(" + std::string(_getJNISignature(xs...)) + ")V";
-            if (JniUtil::getMethodInfo(t, object, methodName.c_str(), signature.c_str())) {
-                t.env->CallVoidMethod(object, t.methodID, _convert(t, xs)...);
-                t.env->DeleteLocalRef(t.classID);
-                _deleteLocalRefs(t.env);
+            if (getMethodInfo(object, methodName, signature, info)) {
+                info.env->CallVoidMethod(object, info.methodID, _convert(info, xs)...);
+                info.env->DeleteLocalRef(info.clazz);
+                _deleteLocalRefs(info.env);
             } else {
                 _reportError("object", methodName, signature);
             }
         }
 
         template<typename... Ts>
-        static void callStaticVoidMethod(const std::string &className,
+        inline void callStaticVoidMethod(const std::string &className,
                                          const std::string &methodName,
                                          Ts... xs) {
-            JniMethodInfo t;
+            MethodInfo info;
             std::string signature = "(" + std::string(_getJNISignature(xs...)) + ")V";
-            if (JniUtil::getStaticMethodInfo(t, className.c_str(), methodName.c_str(),
-                                             signature.c_str())) {
-                t.env->CallStaticVoidMethod(t.classID, t.methodID, _convert(t, xs)...);
-                t.env->DeleteLocalRef(t.classID);
-                _deleteLocalRefs(t.env);
+            if (getStaticMethodInfo(className, methodName, signature, info)) {
+                info.env->CallStaticVoidMethod(info.clazz, info.methodID, _convert(info, xs)...);
+                info.env->DeleteLocalRef(info.clazz);
+                _deleteLocalRefs(info.env);
             } else {
                 _reportError(className, methodName, signature);
             }
         }
 
         template<typename... Ts>
-        static bool callStaticBooleanMethod(const std::string &className,
+        inline bool callStaticBooleanMethod(const std::string &className,
                                             const std::string &methodName,
                                             Ts... xs) {
             jboolean jret = JNI_FALSE;
-            JniMethodInfo t;
+            MethodInfo info;
             std::string signature = "(" + std::string(_getJNISignature(xs...)) + ")Z";
-            if (JniUtil::getStaticMethodInfo(t, className.c_str(), methodName.c_str(),
-                                             signature.c_str())) {
-                jret = t.env->CallStaticBooleanMethod(t.classID, t.methodID, _convert(t, xs)...);
-                t.env->DeleteLocalRef(t.classID);
-                _deleteLocalRefs(t.env);
+            if (getStaticMethodInfo(className, methodName, signature, info)) {
+                jret = info.env->CallStaticBooleanMethod(info.clazz, info.methodID,
+                                                         _convert(info, xs)...);
+                info.env->DeleteLocalRef(info.clazz);
+                _deleteLocalRefs(info.env);
             } else {
                 _reportError(className, methodName, signature);
             }
@@ -93,17 +93,17 @@ namespace snakat {
         }
 
         template<typename... Ts>
-        static int callStaticIntMethod(const std::string &className,
+        inline int callStaticIntMethod(const std::string &className,
                                        const std::string &methodName,
                                        Ts... xs) {
             jint ret = 0;
-            JniMethodInfo t;
+            MethodInfo info;
             std::string signature = "(" + std::string(_getJNISignature(xs...)) + ")I";
-            if (JniUtil::getStaticMethodInfo(t, className.c_str(), methodName.c_str(),
-                                             signature.c_str())) {
-                ret = t.env->CallStaticIntMethod(t.classID, t.methodID, _convert(t, xs)...);
-                t.env->DeleteLocalRef(t.classID);
-                _deleteLocalRefs(t.env);
+            if (getStaticMethodInfo(className, methodName, signature, info)) {
+                ret = info.env->CallStaticIntMethod(info.clazz, info.methodID,
+                                                    _convert(info, xs)...);
+                info.env->DeleteLocalRef(info.clazz);
+                _deleteLocalRefs(info.env);
             } else {
                 _reportError(className, methodName, signature);
             }
@@ -111,17 +111,17 @@ namespace snakat {
         }
 
         template<typename... Ts>
-        static float callStaticFloatMethod(const std::string &className,
+        inline float callStaticFloatMethod(const std::string &className,
                                            const std::string &methodName,
                                            Ts... xs) {
             jfloat ret = 0.0;
-            JniMethodInfo t;
+            MethodInfo info;
             std::string signature = "(" + std::string(_getJNISignature(xs...)) + ")F";
-            if (JniUtil::getStaticMethodInfo(t, className.c_str(), methodName.c_str(),
-                                             signature.c_str())) {
-                ret = t.env->CallStaticFloatMethod(t.classID, t.methodID, _convert(t, xs)...);
-                t.env->DeleteLocalRef(t.classID);
-                _deleteLocalRefs(t.env);
+            if (getStaticMethodInfo(className, methodName, signature, info)) {
+                ret = info.env->CallStaticFloatMethod(info.clazz, info.methodID,
+                                                      _convert(info, xs)...);
+                info.env->DeleteLocalRef(info.clazz);
+                _deleteLocalRefs(info.env);
             } else {
                 _reportError(className, methodName, signature);
             }
@@ -129,17 +129,17 @@ namespace snakat {
         }
 
         template<typename... Ts>
-        static double callStaticDoubleMethod(const std::string &className,
+        inline double callStaticDoubleMethod(const std::string &className,
                                              const std::string &methodName,
                                              Ts... xs) {
             jdouble ret = 0.0;
-            JniMethodInfo t;
+            MethodInfo info;
             std::string signature = "(" + std::string(_getJNISignature(xs...)) + ")D";
-            if (JniUtil::getStaticMethodInfo(t, className.c_str(), methodName.c_str(),
-                                             signature.c_str())) {
-                ret = t.env->CallStaticDoubleMethod(t.classID, t.methodID, _convert(t, xs)...);
-                t.env->DeleteLocalRef(t.classID);
-                _deleteLocalRefs(t.env);
+            if (getStaticMethodInfo(className, methodName, signature, info)) {
+                ret = info.env->CallStaticDoubleMethod(info.clazz, info.methodID,
+                                                       _convert(info, xs)...);
+                info.env->DeleteLocalRef(info.clazz);
+                _deleteLocalRefs(info.env);
             } else {
                 _reportError(className, methodName, signature);
             }
@@ -147,21 +147,20 @@ namespace snakat {
         }
 
         template<typename... Ts>
-        static std::string callStaticStringMethod(const std::string &className,
+        inline std::string callStaticStringMethod(const std::string &className,
                                                   const std::string &methodName,
                                                   Ts... xs) {
             std::string ret;
-            JniMethodInfo t;
+            MethodInfo info;
             std::string signature =
                     "(" + std::string(_getJNISignature(xs...)) + ")Ljava/lang/String;";
-            if (JniUtil::getStaticMethodInfo(t, className.c_str(), methodName.c_str(),
-                                             signature.c_str())) {
-                jstring jret = (jstring) t.env->CallStaticObjectMethod(t.classID, t.methodID,
-                                                                       _convert(t, xs)...);
+            if (getStaticMethodInfo(className, methodName, signature, info)) {
+                jstring jret = (jstring) info.env->CallStaticObjectMethod(info.clazz, info.methodID,
+                                                                          _convert(info, xs)...);
                 ret = JniUtil::jstring2string(jret);
-                t.env->DeleteLocalRef(t.classID);
-                t.env->DeleteLocalRef(jret);
-                _deleteLocalRefs(t.env);
+                info.env->DeleteLocalRef(info.clazz);
+                info.env->DeleteLocalRef(jret);
+                _deleteLocalRefs(info.env);
             } else {
                 _reportError(className, methodName, signature);
             }
@@ -169,75 +168,73 @@ namespace snakat {
         }
 
     private:
-        static JavaVM *_javaVM;
+        JavaVM *_javaVM;
 
-        static AAssetManager *_aAssetManager;
+        std::unordered_map<JNIEnv *, std::vector<jobject>> _localRefs;
 
-        static std::unordered_map<JNIEnv *, std::vector<jobject>> _localRefs;
+        static jclass _getClass(const std::string &name, JNIEnv *env);
 
-        static jclass _getClassID(const char *className, JNIEnv *env);
+        jstring _convert(const MethodInfo &info, const char *x);
 
-        static jstring _convert(JniMethodInfo &t, const char *x);
+        jstring _convert(const MethodInfo &info, const std::string &x);
 
-        static jstring _convert(JniMethodInfo &t, const std::string &x);
-
-        static jvalue _convert(JniMethodInfo &t, const long &x);
+        jvalue _convert(const MethodInfo &info, const long &x);
 
         template<typename T>
-        static T _convert(JniMethodInfo &, T x) {
+        inline T _convert(const MethodInfo &, T x) {
             return x;
         }
 
-        static void _deleteLocalRefs(JNIEnv *env);
+        void _deleteLocalRefs(JNIEnv *env);
 
-        static std::string _getJNISignature() {
+        inline std::string _getJNISignature() const {
             return "";
         }
 
-        static std::string _getJNISignature(bool) {
+        inline std::string _getJNISignature(bool) const {
             return "Z";
         }
 
-        static std::string _getJNISignature(char) {
+        inline std::string _getJNISignature(char) const {
             return "C";
         }
 
-        static std::string _getJNISignature(short) {
+        inline std::string _getJNISignature(short) const {
             return "S";
         }
 
-        static std::string _getJNISignature(int) {
+        inline std::string _getJNISignature(int) const {
             return "I";
         }
 
-        static std::string _getJNISignature(long) {
+        inline std::string _getJNISignature(long) const {
             return "J";
         }
 
-        static std::string _getJNISignature(float) {
+        inline std::string _getJNISignature(float) const {
             return "F";
         }
 
-        static std::string _getJNISignature(double) {
+        inline std::string _getJNISignature(double) const {
             return "D";
         }
 
-        static std::string _getJNISignature(const char *) {
+        inline std::string _getJNISignature(const char *) const {
             return "Ljava/lang/String;";
         }
 
-        static std::string _getJNISignature(const std::string &) {
+        inline std::string _getJNISignature(const std::string &) const {
             return "Ljava/lang/String;";
         }
 
         template<typename T>
-        static std::string _getJNISignature(T x) {
+        inline std::string _getJNISignature(T x) const {
             ASSERT(sizeof(x) == 0, "Unsupported argument type");
             return "";
         }
 
         template<typename T, typename... Ts>
-        static std::string _getJNISignature(T x, Ts... xs) {
+        inline std::string _getJNISignature(T x, Ts... xs) const {
             return _getJNISignature(x) + _getJNISignature(xs...);
         }
 

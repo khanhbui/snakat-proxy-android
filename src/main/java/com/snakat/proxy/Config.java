@@ -14,6 +14,7 @@ public class Config {
     private final String mHostName;
     private final String mSslCertFilename;
     private final String mManifestFilename;
+    private final String mRemoteUrl;
     private final boolean mLogEnabled;
 
     private Config(Builder builder) {
@@ -22,6 +23,7 @@ public class Config {
         mHostName = builder.mHostName;
         mSslCertFilename = builder.mSslCertFilename;
         mManifestFilename = builder.mManifestFilename;
+        mRemoteUrl = builder.mRemoteUrl;
         mLogEnabled = builder.mLogEnabled;
     }
 
@@ -49,6 +51,10 @@ public class Config {
         return mLogEnabled;
     }
 
+    public String getRemoteUrl() {
+        return mRemoteUrl;
+    }
+
     public static class Builder {
 
         private final Resources mResources;
@@ -58,6 +64,7 @@ public class Config {
         private String mHostName;
         private String mSslCertFilename;
         private String mManifestFilename;
+        private String mRemoteUrl;
         private boolean mLogEnabled;
 
         public Builder(@NonNull Context context) {
@@ -103,6 +110,15 @@ public class Config {
 
         public Builder setManifestFilename(@StringRes int manifestFilename) {
             return setManifestFilename(mResources.getString(manifestFilename));
+        }
+
+        public Builder setRemoteUrl(@NonNull String remoteUrl) {
+            mRemoteUrl = remoteUrl;
+            return this;
+        }
+
+        public Builder setRemoteUrl(@StringRes int remoteUrl) {
+            return setRemoteUrl(mResources.getString(remoteUrl));
         }
 
         public Builder setLogEnabled(boolean logEnabled) {
