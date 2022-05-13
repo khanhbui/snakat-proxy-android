@@ -39,7 +39,7 @@ android {
             externalNativeBuild {
                 cmake {
                     cppFlags "-std=c++11 -frtti -fexceptions -lz -DPLATFORM_ANDROID=1"
-                    cFlags "-DPLATFORM_ANDROID=1"
+                    cFlags "-DPLATFORM_ANDROID=1 -DOPENSSL_API_1_1 -DNO_SSL_DL"
                 }
             }
         }
