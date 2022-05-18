@@ -8,7 +8,6 @@
 
 #include "Proxy.h"
 #include "handler/ApiHandler.h"
-#include "handler/EmptyHandler.h"
 #include "handler/FileHandler.h"
 #include "util/FileUtil.h"
 #include "core/Pool.h"
@@ -30,7 +29,6 @@ namespace snakat {
             _civetServer(nullptr),
             _civetCallbacks(nullptr),
             _apiHandler(nullptr),
-            _emptyHandler(nullptr),
             _fileHandler(nullptr),
             _sslEnabled(false),
             _sslCertFilename(),
@@ -44,7 +42,6 @@ namespace snakat {
 
         SAFE_DELETE(_civetCallbacks);
         SAFE_DELETE(_apiHandler);
-        SAFE_DELETE(_emptyHandler);
         SAFE_DELETE(_fileHandler);
     }
 
@@ -70,7 +67,6 @@ namespace snakat {
         initCivetCallback();
 
         _apiHandler = ApiHandler::create();
-        _emptyHandler = EmptyHandler::create();
         _fileHandler = FileHandler::create(documentsAbsDir);
 
         return true;
@@ -96,7 +92,8 @@ namespace snakat {
 
         _isRunning = true;
         _civetServer = new CivetServer(options, _civetCallbacks);
-        addHandlers();
+        _civetServer->addHandler(ApiHandler::URI, _apiHandler);
+        _civetServer->addHandler(FileHandler::URI, _fileHandler);
     }
 
     void Proxy::pause() {
@@ -110,7 +107,8 @@ namespace snakat {
         }
 
         _isRunning = false;
-        removeHandlers();
+        _apiHandler->pause();
+        _fileHandler->pause();
     }
 
     void Proxy::resume() {
@@ -124,7 +122,8 @@ namespace snakat {
         }
 
         _isRunning = true;
-        addHandlers();
+        _apiHandler->resume();
+        _fileHandler->resume();
     }
 
     void Proxy::stop() {
@@ -134,7 +133,6 @@ namespace snakat {
         }
 
         _isRunning = false;
-        removeHandlers();
         _civetServer->close();
         SAFE_DELETE(_civetServer);
     }
@@ -184,20 +182,6 @@ namespace snakat {
 #endif
         _civetCallbacks->log_message = _onLogMessage;
         _civetCallbacks->init_ssl = _onInitSSL;
-    }
-
-    void Proxy::addHandlers() {
-        _civetServer->removeHandler(EmptyHandler::URI);
-
-        _civetServer->addHandler(ApiHandler::URI, _apiHandler);
-        _civetServer->addHandler(FileHandler::URI, _fileHandler);
-    }
-
-    void Proxy::removeHandlers() {
-        _civetServer->removeHandler(ApiHandler::URI);
-        _civetServer->removeHandler(FileHandler::URI);
-
-        _civetServer->addHandler(EmptyHandler::URI, _emptyHandler);
     }
 
     int Proxy::_onInitConnection(const struct mg_connection *conn, void **conn_data) {

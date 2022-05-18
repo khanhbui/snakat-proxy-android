@@ -23,6 +23,10 @@ namespace snakat {
     }
     
     bool ApiHandler::handleGet(CivetServer * server, struct mg_connection * conn) {
+        if (!_isRunning) {
+            return false;
+        }
+
         auto requestInfo = mg_get_request_info(conn);
         std::string requestUri(requestInfo->request_uri);
 
@@ -32,6 +36,10 @@ namespace snakat {
     }
     
     bool ApiHandler::handlePost(CivetServer * server, struct mg_connection * conn) {
+        if (!_isRunning) {
+            return false;
+        }
+
         auto requestInfo = mg_get_request_info(conn);
         std::string requestUri(requestInfo->request_uri);
 

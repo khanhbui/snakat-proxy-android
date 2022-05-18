@@ -49,6 +49,10 @@ namespace snakat {
     }
 
     bool FileHandler::handleGet(CivetServer *server, struct mg_connection *conn) {
+        if (!_isRunning) {
+            return false;
+        }
+
         auto requestInfo = mg_get_request_info(conn);
 
         const char *requestUri = requestInfo->request_uri;

@@ -27,8 +27,6 @@ namespace snakat {
 
     class ApiHandler;
 
-    class EmptyHandler;
-
     class FileHandler;
 
     class Proxy : public Singleton<Proxy> {
@@ -40,7 +38,6 @@ namespace snakat {
         CivetCallbacks *_civetCallbacks;
 
         FileHandler *_fileHandler;
-        EmptyHandler *_emptyHandler;
         ApiHandler *_apiHandler;
 
         bool _sslEnabled;
@@ -62,10 +59,6 @@ namespace snakat {
                          bool sslEnabled, const std::string &sslCertFilename);
 
         void initCivetCallback();
-
-        void addHandlers();
-
-        void removeHandlers();
 
     public:
         Proxy();

@@ -17,6 +17,8 @@ namespace snakat {
     protected:
         HttpHandler();
 
+        bool _isRunning;
+
     public:
         virtual ~HttpHandler();
 
@@ -25,6 +27,10 @@ namespace snakat {
         static HttpHandler * create();
 
         virtual bool init();
+
+        virtual void pause();
+
+        virtual void resume();
     };
 }
 

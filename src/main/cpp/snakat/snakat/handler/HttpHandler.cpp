@@ -13,7 +13,9 @@ namespace snakat {
 
     const char * HttpHandler::URI = "";
 
-    HttpHandler::HttpHandler() = default;
+    HttpHandler::HttpHandler() :
+        _isRunning(true) {
+    }
 
     HttpHandler::~HttpHandler() = default;
 
@@ -30,4 +32,11 @@ namespace snakat {
         return true;
     }
 
+    void HttpHandler::pause() {
+        _isRunning = false;
+    }
+
+    void HttpHandler::resume() {
+        _isRunning = true;
+    }
 }

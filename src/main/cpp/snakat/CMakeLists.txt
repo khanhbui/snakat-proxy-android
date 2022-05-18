@@ -47,7 +47,6 @@ add_library(
         STATIC
         snakat/core/AutoreleaseObject.cpp
         snakat/handler/ApiHandler.cpp
-        snakat/handler/EmptyHandler.cpp
         snakat/handler/FileHandler.cpp
         snakat/handler/HttpHandler.cpp
         snakat/Proxy.cpp
