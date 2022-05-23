@@ -49,6 +49,7 @@ namespace snakat {
     }
 
     bool FileHandler::handleGet(CivetServer *server, struct mg_connection *conn) {
+        LOGD("FileHandler::handleGet: _isRunning=%d", _isRunning);
         if (!_isRunning) {
             return false;
         }

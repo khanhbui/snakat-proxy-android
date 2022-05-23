@@ -91,6 +91,9 @@ namespace snakat {
         }
 
         _isRunning = true;
+        _apiHandler->resume();
+        _fileHandler->resume();
+
         _civetServer = new CivetServer(options, _civetCallbacks);
         _civetServer->addHandler(ApiHandler::URI, _apiHandler);
         _civetServer->addHandler(FileHandler::URI, _fileHandler);
