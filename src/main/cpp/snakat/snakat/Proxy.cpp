@@ -51,7 +51,7 @@ namespace snakat {
     bool init(
 #endif
                 const std::string &documentsAbsDir, const std::string &hostname,
-                bool sslEnabled, const std::string &sslCertFilename) {
+                bool sslEnabled, const std::string &sslCertFilename, const std::string &sslCertPem) {
 
         LOGI("Proxy's config: {\n\tdocumentsAbsDir: %s, \n\thostname: %s, \n\tsslEnabled: %d, \n\tsslFilename: %s\n}",
              documentsAbsDir.c_str(), hostname.c_str(), sslEnabled, sslCertFilename.c_str());
@@ -63,7 +63,7 @@ namespace snakat {
         FileUtil::getInstance().init();
 #endif
 
-        initOptions(documentsAbsDir, hostname, sslEnabled, sslCertFilename);
+        initOptions(documentsAbsDir, hostname, sslEnabled, sslCertFilename, sslCertPem);
         initCivetCallback();
 
         _apiHandler = ApiHandler::create();
@@ -81,7 +81,9 @@ namespace snakat {
         if (_sslEnabled) {
             LOGD("PEM path %s", _sslCertPath.c_str());
             if (!FileUtil::exist(_sslCertPath)) {
-                if (FileUtil::getInstance().copyFromApk(_sslCertFilename, _sslCertPath)) {
+                if (!_sslCertPem.empty() && FileUtil::getInstance().writeFile(_sslCertPath, _sslCertPem)) {
+                    LOGD("Created pem at %s", _sslCertPath.c_str());
+                } else if (FileUtil::getInstance().copyFromApk(_sslCertFilename, _sslCertPath)) {
                     LOGD("Copied pem from apk to %s", _sslCertPath.c_str());
                 } else {
                     LOGE("SSL is enabled but there is no SSL Cert file.");
@@ -141,7 +143,7 @@ namespace snakat {
     }
 
     void Proxy::initOptions(const std::string &documentsAbsDir, const std::string &hostname,
-                            bool sslEnabled, const std::string &sslCertFilename) {
+                            bool sslEnabled, const std::string &sslCertFilename, const std::string &sslCertPem) {
         options.emplace_back("document_root");
         options.push_back(documentsAbsDir);
 
@@ -161,6 +163,7 @@ namespace snakat {
             _sslEnabled = true;
             _sslCertFilename = sslCertFilename;
             _sslCertPath = documentsAbsDir + "/.cert/" + sslCertFilename;
+            _sslCertPem = sslCertPem;
 
             options.emplace_back("ssl_certificate");
             options.emplace_back(_sslCertPath.c_str());
@@ -174,6 +177,7 @@ namespace snakat {
             _sslEnabled = false;
             _sslCertFilename = "";
             _sslCertPath = "";
+            _sslCertPem = nullptr;
         }
     }
 

@@ -13,6 +13,7 @@ public class Config {
     private final boolean mSslEnabled;
     private final String mHostName;
     private final String mSslCertFilename;
+    private final String mSslCertPem;
     private final String mManifestFilename;
     private final String mRemoteUrl;
     private final boolean mLogEnabled;
@@ -22,6 +23,7 @@ public class Config {
         mSslEnabled = builder.mSslEnabled;
         mHostName = builder.mHostName;
         mSslCertFilename = builder.mSslCertFilename;
+        mSslCertPem = builder.mSslCertPem;
         mManifestFilename = builder.mManifestFilename;
         mRemoteUrl = builder.mRemoteUrl;
         mLogEnabled = builder.mLogEnabled;
@@ -41,6 +43,10 @@ public class Config {
 
     public String getSslCertFilename() {
         return mSslCertFilename;
+    }
+
+    public String getSslCertPem() {
+        return mSslCertPem;
     }
 
     public String getManifestFilename() {
@@ -63,6 +69,7 @@ public class Config {
         private boolean mSslEnabled;
         private String mHostName;
         private String mSslCertFilename;
+        private String mSslCertPem;
         private String mManifestFilename;
         private String mRemoteUrl;
         private boolean mLogEnabled;
@@ -99,8 +106,17 @@ public class Config {
             return this;
         }
 
+        public Builder setSslCertPem(@NonNull String sslCertPem) {
+            mSslCertPem = sslCertPem;
+            return this;
+        }
+
         public Builder setSslCertFilename(@StringRes int sslCertFilename) {
             return setSslCertFilename(mResources.getString(sslCertFilename));
+        }
+
+        public Builder setSslCertPem(@StringRes int sslCertPem) {
+            return setSslCertPem(mResources.getString(sslCertPem));
         }
 
         public Builder setManifestFilename(@NonNull String manifestFilename) {

@@ -16,7 +16,7 @@ extern "C"
 JNIEXPORT void JNICALL
 Java_com_snakat_proxy_ProxyInternal_initJNI(JNIEnv *env, jobject thiz, jobject asset_manager,
                                             jstring document_dir, jstring host_name,
-                                            jboolean ssl_enabled, jstring ssl_cert_filename) {
+                                            jboolean ssl_enabled, jstring ssl_cert_filename, jstring ssl_cert_pem) {
     android_java_asset_manager = env->NewGlobalRef(asset_manager);
 
     AAssetManager *assetManager = AAssetManager_fromJava(env, android_java_asset_manager);
@@ -24,12 +24,13 @@ Java_com_snakat_proxy_ProxyInternal_initJNI(JNIEnv *env, jobject thiz, jobject a
     const char *hostname = env->GetStringUTFChars(host_name, 0);
     bool sslEnabled = ssl_enabled == JNI_TRUE;
     const char *sslCertFilename = env->GetStringUTFChars(ssl_cert_filename, 0);
+    const char *sslCertPem = env->GetStringUTFChars(ssl_cert_pem, 0);
 
     JavaVM *jvm;
     int status = env->GetJavaVM(&jvm);
     if (status == 0) {
         Proxy::getInstance().init(jvm, assetManager, documentDir, hostname, sslEnabled,
-                                  sslCertFilename);
+                                  sslCertFilename, sslCertPem);
     } else {
         LOGE("Cannot get JavaVM.");
     }

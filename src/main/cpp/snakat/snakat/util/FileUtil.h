@@ -39,6 +39,8 @@ namespace snakat {
 
         static bool exist(const std::string &path);
         static bool isDirectory(const std::string &path);
+
+        static bool writeFile(const std::string &filename, const std::string &content);
     };
 }
 

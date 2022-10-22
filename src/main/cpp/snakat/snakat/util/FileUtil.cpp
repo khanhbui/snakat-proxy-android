@@ -164,4 +164,16 @@ namespace snakat {
         return false;
     }
 
+    bool FileUtil::writeFile(const std::string &filename, const std::string &content) {
+        if (makeDir(getDirFromFilename(filename))) {
+            FILE *out = fopen(filename.c_str(), "w+");
+            if (out) {
+                fwrite(content.c_str(), sizeof(char), content.size(), out);
+                fclose(out);
+                return true;
+            }
+        }
+        return false;
+    }
+
 }

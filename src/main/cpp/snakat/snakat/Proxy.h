@@ -43,6 +43,7 @@ namespace snakat {
         bool _sslEnabled;
         std::string _sslCertFilename;
         std::string _sslCertPath;
+        std::string _sslCertPem;
 
         bool _isRunning;
 
@@ -56,7 +57,7 @@ namespace snakat {
         static int _onInitSSL(void *ssl_ctx, void *user_data);
 
         void initOptions(const std::string &documentsAbsDir, const std::string &hostname,
-                         bool sslEnabled, const std::string &sslCertFilename);
+                         bool sslEnabled, const std::string &sslCertFilename, const std::string &sslCertPem);
 
         void initCivetCallback();
 
@@ -71,7 +72,7 @@ namespace snakat {
         bool init(
 #endif
                   const std::string &documentsAbsDir, const std::string &hostname,
-                  bool sslEnabled, const std::string &sslCertFilename);
+                  bool sslEnabled, const std::string &sslCertFilename, const std::string &sslCertPem);
 
         void start();
 

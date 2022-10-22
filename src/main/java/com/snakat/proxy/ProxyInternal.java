@@ -59,7 +59,8 @@ abstract class ProxyInternal {
                 config.getDocumentDir(),
                 config.getHostName(),
                 config.isSslEnabled(),
-                config.getSslCertFilename());
+                config.getSslCertFilename(),
+                config.getSslCertPem());
 
         Retrofit retrofit = new Retrofit.Builder()
                 .baseUrl(mConfig.getRemoteUrl())
@@ -329,7 +330,7 @@ abstract class ProxyInternal {
         return completable;
     }
 
-    protected native void initJNI(AssetManager assetManager, String documentDir, String hostName, boolean sslEnabled, String sslCertFilename);
+    protected native void initJNI(AssetManager assetManager, String documentDir, String hostName, boolean sslEnabled, String sslCertFilename, String sslCertPem);
 
     protected native void startJNI();
 
